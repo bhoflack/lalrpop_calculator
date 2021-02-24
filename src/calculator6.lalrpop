@@ -1,0 +1,51 @@
+use crate::ast::{Expr, Opcode};
+use std::str::FromStr;
+use lalrpop_util::ParseError;
+use super::Calculator6Error;
+
+grammar;
+
+
+extern {
+    type Error = Calculator6Error;
+}
+
+pub Expr: Box<Expr> = {
+    Expr ExprOp Factor => Box::new(Expr::Op(<>)),
+    Factor,
+};
+
+ExprOp: Opcode = {
+    "+" => Opcode::Add,
+    "-" => Opcode::Sub,
+};
+
+Factor: Box<Expr> = {
+    Factor FactorOp Term => Box::new(Expr::Op(<>)),
+    Term,
+};
+
+FactorOp: Opcode = {
+    "*" => Opcode::Mul,
+    "/" => Opcode::Div,
+};
+
+Term: Box<Expr> = {
+    Num => Box::new(Expr::Number(<>)),
+    "(" <Expr> ")",
+};
+
+Num: i32 = {
+    r"[0-9]+" =>?  i32::from_str(<>).map_err(|_| ParseError::User {
+        error: Calculator6Error::InputTooBig 
+    })
+    .and_then(|i| if i % 2 == 0 {
+        Ok(i)
+    } else {
+        Err(
+            ParseError::User {
+                error: Calculator6Error::OddNumber
+            }
+        )
+    })
+};
